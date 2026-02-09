@@ -1,46 +1,45 @@
 # TrackerRelo
 
-Batch tracker URL replacement tool for qBittorrent and Transmission.
+Batch tracker URL replacement tool for qBittorrent and Transmission. A desktop app built with Tauri 2 + React.
 
-Built with Rust + Tauri 2 + React + TypeScript + Tailwind CSS + shadcn/ui.
+批量替换 qBittorrent / Transmission tracker 地址的桌面工具。基于 Tauri 2 + React 构建。
 
-## Features
+![Preview](docs/Preview.png)
 
-- **qBittorrent** — connects via WebUI API (`/api/v2/`)
-- **Transmission** — connects via RPC API (session-id auth, `trackerReplace`)
-- **HTTP / HTTPS** — supports both, auto-accepts self-signed certs in HTTPS mode
-- **Visual rule editor** — old domain → new domain, per-rule enable/disable toggle
-- **Preview before execute** — scan to see matched torrents, then one-click replace
-- **Execution log** — real-time results with success/failure indicators
-- **Auto-save config** — connection settings and rules persist across sessions
-- **Light / Dark theme** — follows system preference
-- **Cross-platform** — macOS, Windows, Linux
+## Features / 功能特性
 
-## Screenshots
+- **qBittorrent** — WebUI API (`/api/v2/`)
+- **Transmission** — RPC API (session-id auth, `trackerReplace`)
+- **HTTP / HTTPS** — auto-accepts self-signed certs / 自动接受自签名证书
+- **Visual rule editor / 可视化规则编辑器** — old → new domain, per-rule toggle / 旧域名 → 新域名，逐条启用禁用
+- **Preview before execute / 执行前预览** — scan matched torrents, one-click replace / 扫描匹配种子，一键替换
+- **Execution log / 执行日志** — real-time success/failure indicators / 实时成功失败状态
+- **Auto-save config / 自动保存配置** — settings and rules persist across sessions / 跨会话持久化
+- **Light / Dark theme / 明暗主题** — follows system preference / 跟随系统设置
+- **Cross-platform / 跨平台** — macOS, Windows, Linux
 
-<!-- TODO -->
+## Note / 注意
+
+> **macOS:** The app is not code-signed. On first launch, right-click the app and select "Open", or run `xattr -cr /path/to/TrackerRelo.app` to bypass Gatekeeper.
+>
+> **macOS：** 应用未签名。首次打开请右键选择「打开」，或执行 `xattr -cr /path/to/TrackerRelo.app` 解除限制。
 
 ## Development
 
 ```bash
-# Install dependencies
 bun install
-
-# Run in dev mode (hot reload)
 bun tauri dev
-
-# Build for production
 bun tauri build
 ```
 
 ## Tech Stack
 
-| Layer    | Technology                          |
-| -------- | ----------------------------------- |
-| Backend  | Rust, Tauri 2, reqwest              |
+| Layer    | Technology                           |
+| -------- | ------------------------------------ |
+| Backend  | Rust, Tauri 2, reqwest               |
 | Frontend | React 18, TypeScript, Tailwind CSS 4 |
-| UI       | shadcn/ui (new-york style)          |
-| Build    | Vite, Cargo                         |
+| UI       | shadcn/ui                            |
+| Build    | Vite, Cargo                          |
 
 ## License
 
