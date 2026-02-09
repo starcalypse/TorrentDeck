@@ -32,11 +32,25 @@ pub struct MatchedTorrent {
 async fn create_downloader(conn: &ConnectionConfig) -> Result<DownloaderKind, String> {
     match conn.downloader_type.as_str() {
         "qbittorrent" => {
-            let qb = QBittorrent::new(&conn.host, conn.port, &conn.username, &conn.password, conn.use_https).await?;
+            let qb = QBittorrent::new(
+                &conn.host,
+                conn.port,
+                &conn.username,
+                &conn.password,
+                conn.use_https,
+            )
+            .await?;
             Ok(DownloaderKind::QBittorrent(qb))
         }
         "transmission" => {
-            let tr = Transmission::new(&conn.host, conn.port, &conn.username, &conn.password, conn.use_https).await?;
+            let tr = Transmission::new(
+                &conn.host,
+                conn.port,
+                &conn.username,
+                &conn.password,
+                conn.use_https,
+            )
+            .await?;
             Ok(DownloaderKind::Transmission(tr))
         }
         other => Err(format!("Unknown downloader type: {}", other)),
@@ -48,8 +62,14 @@ fn apply_rules(tracker_url: &str, rules: &[config::Rule]) -> Option<String> {
         if !rule.enabled {
             continue;
         }
-        if tracker_url.contains(&rule.old_domain) {
-            return Some(tracker_url.replace(&rule.old_domain, &rule.new_domain));
+        let old_domain = rule.old_domain.trim();
+        if old_domain.is_empty() {
+            continue;
+        }
+        if tracker_url.contains(old_domain) {
+            // Domains should not contain whitespace; trim to avoid surprising replacements.
+            let new_domain = rule.new_domain.trim();
+            return Some(tracker_url.replace(old_domain, new_domain));
         }
     }
     None
@@ -82,7 +102,11 @@ pub async fn scan_torrents(config: AppConfig) -> Result<ScanResult, String> {
 
     Ok(ScanResult {
         total_torrents: torrents.len(),
-        matched_torrents: matches.iter().map(|m| &m.hash).collect::<std::collections::HashSet<_>>().len(),
+        matched_torrents: matches
+            .iter()
+            .map(|m| &m.hash)
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
         matches,
     })
 }
@@ -96,7 +120,10 @@ pub async fn execute_replace(config: AppConfig) -> Result<Vec<ReplaceResult>, St
     for torrent in &torrents {
         for tracker in &torrent.trackers {
             if let Some(new_url) = apply_rules(&tracker.url, &config.rules) {
-                let result = match dl.replace_tracker(&torrent.hash, &tracker.url, &new_url).await {
+                let result = match dl
+                    .replace_tracker(&torrent.hash, &tracker.url, &new_url)
+                    .await
+                {
                     Ok(()) => ReplaceResult {
                         torrent_name: torrent.name.clone(),
                         old_url: tracker.url.clone(),

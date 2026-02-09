@@ -25,7 +25,13 @@ struct RpcResponse {
 }
 
 impl Transmission {
-    pub async fn new(host: &str, port: u16, username: &str, password: &str, use_https: bool) -> Result<Self, String> {
+    pub async fn new(
+        host: &str,
+        port: u16,
+        username: &str,
+        password: &str,
+        use_https: bool,
+    ) -> Result<Self, String> {
         let scheme = if use_https { "https" } else { "http" };
         let url = format!("{}://{}:{}/transmission/rpc", scheme, host, port);
         let client = Client::builder()
@@ -44,7 +50,7 @@ impl Transmission {
             None
         };
 
-        let mut tr = Self {
+        let tr = Self {
             url,
             client,
             session_id: Mutex::new(String::new()),
@@ -55,8 +61,11 @@ impl Transmission {
         Ok(tr)
     }
 
-    async fn refresh_session_id(&mut self) -> Result<(), String> {
-        let mut req = self.client.post(&self.url).header("Content-Type", "application/json");
+    async fn refresh_session_id(&self) -> Result<(), String> {
+        let mut req = self
+            .client
+            .post(&self.url)
+            .header("Content-Type", "application/json");
         if let Some(ref auth) = self.auth_header {
             req = req.header("Authorization", auth);
         }
@@ -90,41 +99,65 @@ impl Transmission {
     }
 
     async fn rpc_call(&self, method: &str, arguments: Value) -> Result<Value, String> {
-        let sid = self.session_id.lock().unwrap().clone();
-        let mut req = self
-            .client
-            .post(&self.url)
-            .header("Content-Type", "application/json")
-            .header("X-Transmission-Session-Id", &sid);
+        let request = RpcRequest {
+            method: method.to_string(),
+            arguments,
+        };
 
-        if let Some(ref auth) = self.auth_header {
-            req = req.header("Authorization", auth);
+        // Transmission uses HTTP 409 to indicate the session id is missing/expired.
+        // When that happens, we update the session id and retry once.
+        for attempt in 0..2 {
+            let sid = self.session_id.lock().unwrap().clone();
+            let mut req = self
+                .client
+                .post(&self.url)
+                .header("Content-Type", "application/json")
+                .header("X-Transmission-Session-Id", &sid);
+
+            if let Some(ref auth) = self.auth_header {
+                req = req.header("Authorization", auth);
+            }
+
+            let resp = req.json(&request).send().await.map_err(|e| e.to_string())?;
+
+            if resp.status().as_u16() == 409 {
+                if let Some(sid) = resp.headers().get("x-transmission-session-id") {
+                    *self.session_id.lock().unwrap() = sid.to_str().unwrap_or("").to_string();
+                    if attempt == 0 {
+                        continue;
+                    }
+                }
+                // Fall back to an explicit refresh for weird responses (or if we already retried).
+                self.refresh_session_id().await?;
+                if attempt == 0 {
+                    continue;
+                }
+            }
+
+            if !resp.status().is_success() {
+                return Err(format!("Unexpected status: {}", resp.status()));
+            }
+
+            let resp: RpcResponse = resp.json().await.map_err(|e| e.to_string())?;
+
+            if resp.result != "success" {
+                return Err(format!("RPC error: {}", resp.result));
+            }
+
+            return Ok(resp.arguments.unwrap_or(json!({})));
         }
 
-        let resp: RpcResponse = req
-            .json(&RpcRequest {
-                method: method.to_string(),
-                arguments,
-            })
-            .send()
-            .await
-            .map_err(|e| e.to_string())?
-            .json()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        if resp.result != "success" {
-            return Err(format!("RPC error: {}", resp.result));
-        }
-
-        Ok(resp.arguments.unwrap_or(json!({})))
+        Err("RPC failed after session refresh".to_string())
     }
 }
 
 impl Transmission {
     pub async fn test_connection(&self) -> Result<String, String> {
         let args = self.rpc_call("session-get", json!({})).await?;
-        let version = args.get("version").and_then(|v| v.as_str()).unwrap_or("unknown");
+        let version = args
+            .get("version")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
         Ok(format!("Transmission {}", version))
     }
 
@@ -145,8 +178,16 @@ impl Transmission {
 
         let mut result = Vec::new();
         for t in torrents {
-            let hash = t.get("hashString").and_then(|v| v.as_str()).unwrap_or("").to_string();
-            let name = t.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let hash = t
+                .get("hashString")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let name = t
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             let trackers = t
                 .get("trackers")
                 .and_then(|v| v.as_array())
