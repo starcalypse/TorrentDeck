@@ -84,7 +84,6 @@ jobs:
           name: TrackerRelo-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             src-tauri/target/**/release/bundle/dmg/*.dmg
-            src-tauri/target/**/release/bundle/macos/*.app.tar.gz
             src-tauri/target/**/release/bundle/deb/*.deb
             src-tauri/target/**/release/bundle/rpm/*.rpm
             src-tauri/target/**/release/bundle/appimage/*.AppImage
@@ -97,6 +96,17 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        id: changelog
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -106,11 +116,10 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
-          body: "See the assets below to download for your platform."
+          draft: false
+          body: ${{ steps.changelog.outputs.content }}
           files: |
             artifacts/**/*.dmg
-            artifacts/**/*.app.tar.gz
             artifacts/**/*.deb
             artifacts/**/*.rpm
             artifacts/**/*.AppImage
