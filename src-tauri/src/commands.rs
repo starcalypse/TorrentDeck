@@ -159,11 +159,7 @@ pub async fn execute_replace(config: AppConfig) -> Result<Vec<ReplaceResult>, St
                         error: None,
                     },
                     Err(e) => {
-                        log::error!(
-                            "Failed to replace tracker for '{}': {}",
-                            torrent.name,
-                            e
-                        );
+                        log::error!("Failed to replace tracker for '{}': {}", torrent.name, e);
                         ReplaceResult {
                             torrent_name: torrent.name.clone(),
                             old_url: tracker.url.clone(),

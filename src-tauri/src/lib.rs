@@ -3,7 +3,7 @@ mod config;
 mod downloader;
 
 use tauri::{LogicalUnit, Manager, PixelUnit, WindowSizeConstraints};
-use tauri_plugin_log::{Target, TargetKind, RotationStrategy, TimezoneStrategy};
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
