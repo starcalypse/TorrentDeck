@@ -43,18 +43,39 @@ impl Default for AppConfig {
 
 fn config_path() -> PathBuf {
     let dir = dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
+        .unwrap_or_else(|| {
+            log::warn!("Could not determine config directory, falling back to current dir");
+            PathBuf::from(".")
+        })
         .join("TrackerRelo");
     std::fs::create_dir_all(&dir).ok();
-    dir.join("config.json")
+    let path = dir.join("config.json");
+    log::debug!("Config path: {}", path.display());
+    path
 }
 
 pub fn load() -> AppConfig {
     let path = config_path();
     if path.exists() {
-        let data = std::fs::read_to_string(&path).unwrap_or_default();
-        serde_json::from_str(&data).unwrap_or_default()
+        let data = match std::fs::read_to_string(&path) {
+            Ok(d) => d,
+            Err(e) => {
+                log::error!("Failed to read config file: {}", e);
+                return AppConfig::default();
+            }
+        };
+        match serde_json::from_str(&data) {
+            Ok(cfg) => {
+                log::info!("Config loaded from {}", path.display());
+                cfg
+            }
+            Err(e) => {
+                log::error!("Failed to parse config: {}", e);
+                AppConfig::default()
+            }
+        }
     } else {
+        log::info!("No config file found, using defaults");
         AppConfig::default()
     }
 }
@@ -62,5 +83,14 @@ pub fn load() -> AppConfig {
 pub fn save(config: &AppConfig) -> Result<(), String> {
     let path = config_path();
     let data = serde_json::to_string_pretty(config).map_err(|e| e.to_string())?;
-    std::fs::write(&path, data).map_err(|e| e.to_string())
+    match std::fs::write(&path, data) {
+        Ok(()) => {
+            log::debug!("Config saved to {}", path.display());
+            Ok(())
+        }
+        Err(e) => {
+            log::error!("Failed to save config: {}", e);
+            Err(e.to_string())
+        }
+    }
 }

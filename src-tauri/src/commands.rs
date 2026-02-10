@@ -30,6 +30,12 @@ pub struct MatchedTorrent {
 }
 
 async fn create_downloader(conn: &ConnectionConfig) -> Result<DownloaderKind, String> {
+    log::info!(
+        "Connecting to {} at {}:{}",
+        conn.downloader_type,
+        conn.host,
+        conn.port
+    );
     match conn.downloader_type.as_str() {
         "qbittorrent" => {
             let qb = QBittorrent::new(
@@ -53,7 +59,10 @@ async fn create_downloader(conn: &ConnectionConfig) -> Result<DownloaderKind, St
             .await?;
             Ok(DownloaderKind::Transmission(tr))
         }
-        other => Err(format!("Unknown downloader type: {}", other)),
+        other => {
+            log::error!("Unknown downloader type: {}", other);
+            Err(format!("Unknown downloader type: {}", other))
+        }
     }
 }
 
@@ -77,12 +86,20 @@ fn apply_rules(tracker_url: &str, rules: &[config::Rule]) -> Option<String> {
 
 #[tauri::command]
 pub async fn test_connection(connection: ConnectionConfig) -> Result<String, String> {
+    log::info!("Testing connection to {}", connection.downloader_type);
     let dl = create_downloader(&connection).await?;
-    dl.test_connection().await
+    let result = dl.test_connection().await;
+    match &result {
+        Ok(msg) => log::info!("Connection test succeeded: {}", msg),
+        Err(e) => log::warn!("Connection test failed: {}", e),
+    }
+    result
 }
 
 #[tauri::command]
 pub async fn scan_torrents(config: AppConfig) -> Result<ScanResult, String> {
+    let active_rules = config.rules.iter().filter(|r| r.enabled).count();
+    log::info!("Scanning torrents with {} active rules", active_rules);
     let dl = create_downloader(&config.connection).await?;
     let torrents = dl.list_torrents().await?;
 
@@ -100,19 +117,29 @@ pub async fn scan_torrents(config: AppConfig) -> Result<ScanResult, String> {
         }
     }
 
+    let matched_torrents = matches
+        .iter()
+        .map(|m| &m.hash)
+        .collect::<std::collections::HashSet<_>>()
+        .len();
+
+    log::info!(
+        "Scan complete: {} total torrents, {} matched, {} replacements",
+        torrents.len(),
+        matched_torrents,
+        matches.len()
+    );
+
     Ok(ScanResult {
         total_torrents: torrents.len(),
-        matched_torrents: matches
-            .iter()
-            .map(|m| &m.hash)
-            .collect::<std::collections::HashSet<_>>()
-            .len(),
+        matched_torrents,
         matches,
     })
 }
 
 #[tauri::command]
 pub async fn execute_replace(config: AppConfig) -> Result<Vec<ReplaceResult>, String> {
+    log::info!("Executing tracker replacements");
     let dl = create_downloader(&config.connection).await?;
     let torrents = dl.list_torrents().await?;
 
@@ -131,24 +158,40 @@ pub async fn execute_replace(config: AppConfig) -> Result<Vec<ReplaceResult>, St
                         success: true,
                         error: None,
                     },
-                    Err(e) => ReplaceResult {
-                        torrent_name: torrent.name.clone(),
-                        old_url: tracker.url.clone(),
-                        new_url,
-                        success: false,
-                        error: Some(e),
-                    },
+                    Err(e) => {
+                        log::error!(
+                            "Failed to replace tracker for '{}': {}",
+                            torrent.name,
+                            e
+                        );
+                        ReplaceResult {
+                            torrent_name: torrent.name.clone(),
+                            old_url: tracker.url.clone(),
+                            new_url,
+                            success: false,
+                            error: Some(e),
+                        }
+                    }
                 };
                 results.push(result);
             }
         }
     }
 
+    let success_count = results.iter().filter(|r| r.success).count();
+    let fail_count = results.len() - success_count;
+    log::info!(
+        "Replacement complete: {} succeeded, {} failed",
+        success_count,
+        fail_count
+    );
+
     Ok(results)
 }
 
 #[tauri::command]
 pub async fn list_trackers(connection: ConnectionConfig) -> Result<Vec<TrackerEntry>, String> {
+    log::info!("Listing tracker domains");
     let dl = create_downloader(&connection).await?;
     let torrents = dl.list_torrents().await?;
 
@@ -173,6 +216,8 @@ pub async fn list_trackers(connection: ConnectionConfig) -> Result<Vec<TrackerEn
         .map(|(domain, count)| TrackerEntry { domain, count })
         .collect();
     entries.sort_by(|a, b| b.count.cmp(&a.count));
+
+    log::info!("Found {} unique tracker domains", entries.len());
 
     Ok(entries)
 }

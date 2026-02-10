@@ -30,26 +30,35 @@ impl QBittorrent {
     ) -> Result<Self, String> {
         let scheme = if use_https { "https" } else { "http" };
         let base_url = format!("{}://{}:{}", scheme, host, port);
+        log::debug!("qBittorrent base URL: {}", base_url);
         let client = Client::builder()
             .cookie_store(true)
             .danger_accept_invalid_certs(use_https)
             .timeout(std::time::Duration::from_secs(10))
             .connect_timeout(std::time::Duration::from_secs(5))
             .build()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| {
+                log::error!("Failed to build HTTP client: {}", e);
+                e.to_string()
+            })?;
 
         let resp = client
             .post(format!("{}/api/v2/auth/login", base_url))
             .form(&[("username", username), ("password", password)])
             .send()
             .await
-            .map_err(|e| format!("Connection failed: {}", e))?;
+            .map_err(|e| {
+                log::error!("qBittorrent connection failed: {}", e);
+                format!("Connection failed: {}", e)
+            })?;
 
         let text = resp.text().await.map_err(|e| e.to_string())?;
         if text.trim() != "Ok." {
+            log::warn!("qBittorrent login rejected: {}", text.trim());
             return Err(format!("Login failed: {}", text));
         }
 
+        log::info!("qBittorrent auth successful");
         Ok(Self { base_url, client })
     }
 }
@@ -63,6 +72,7 @@ impl QBittorrent {
             .await
             .map_err(|e| format!("Connection failed: {}", e))?;
         let version = resp.text().await.map_err(|e| e.to_string())?;
+        log::info!("qBittorrent version: {}", version.trim());
         Ok(format!("qBittorrent {}", version))
     }
 
@@ -76,6 +86,8 @@ impl QBittorrent {
             .json()
             .await
             .map_err(|e| e.to_string())?;
+
+        log::debug!("qBittorrent returned {} torrents", torrents.len());
 
         let mut result = Vec::new();
         for t in torrents {
@@ -115,6 +127,7 @@ impl QBittorrent {
         old_url: &str,
         new_url: &str,
     ) -> Result<(), String> {
+        log::debug!("Replacing tracker for hash={}", hash);
         let resp = self
             .client
             .post(format!("{}/api/v2/torrents/editTracker", self.base_url))
@@ -125,6 +138,7 @@ impl QBittorrent {
 
         if !resp.status().is_success() {
             let text = resp.text().await.unwrap_or_default();
+            log::error!("Edit tracker failed for hash={}: {}", hash, text);
             return Err(format!("Edit tracker failed: {}", text));
         }
 
