@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
+import { error as logError, warn as logWarn } from "@tauri-apps/plugin-log";
 import {
   Card,
   CardContent,
@@ -131,6 +133,12 @@ function App() {
   const [isFetchingTrackers, setIsFetchingTrackers] = useState(false);
   const [trackerPopoverOpen, setTrackerPopoverOpen] = useState(false);
 
+  // -- App version (read from Cargo.toml via Tauri)
+  const [appVersion, setAppVersion] = useState("");
+  useEffect(() => {
+    getVersion().then(setAppVersion);
+  }, []);
+
   // -- Load config on mount
   useEffect(() => {
     invoke<AppConfig>("load_config")
@@ -138,9 +146,7 @@ function App() {
         setConnection(cfg.connection);
         if (cfg.rules.length > 0) setRules(cfg.rules);
       })
-      .catch(() => {
-        // Use defaults if load fails
-      });
+      .catch((err) => logWarn(`Failed to load config: ${err}`));
   }, []);
 
   // -- Persist config helper
@@ -152,8 +158,8 @@ function App() {
   const saveConfig = useCallback(async () => {
     try {
       await invoke("save_config", { config: buildConfig() });
-    } catch {
-      // Silent save failure
+    } catch (err) {
+      logWarn(`Failed to save config: ${err}`);
     }
   }, [buildConfig]);
 
@@ -230,8 +236,8 @@ function App() {
       const entries = await invoke<TrackerEntry[]>("list_trackers", { connection });
       setExistingTrackers(entries);
       setTrackerPopoverOpen(true);
-    } catch {
-      // Fetch failed — popover stays closed
+    } catch (err) {
+      logError(`Failed to fetch trackers: ${err}`);
     } finally {
       setIsFetchingTrackers(false);
     }
@@ -258,8 +264,8 @@ function App() {
         config: buildConfig(),
       });
       setScanResult(result);
-    } catch {
-      // Scan failed
+    } catch (err) {
+      logError(`Scan failed: ${err}`);
     } finally {
       setIsScanning(false);
     }
@@ -273,8 +279,8 @@ function App() {
         config: buildConfig(),
       });
       setScanResult(null);
-    } catch {
-      // Execute failed
+    } catch (err) {
+      logError(`Execute failed: ${err}`);
     } finally {
       setIsExecuting(false);
     }
@@ -303,9 +309,11 @@ function App() {
           <span className="text-sm font-semibold tracking-tight" data-tauri-drag-region>
             TrackerRelo
           </span>
-          <span className="text-xs text-muted-foreground" data-tauri-drag-region>
-            v0.1.0
-          </span>
+          {appVersion && (
+            <span className="text-xs text-muted-foreground" data-tauri-drag-region>
+              v{appVersion}
+            </span>
+          )}
         </div>
       </div>
 
