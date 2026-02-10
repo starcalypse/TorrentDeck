@@ -1,10 +1,10 @@
 [package]
-name = "tracker-relo"
+name = "torrent-deck"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "tracker_relo_lib"
+name = "torrent_deck_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [profile.release]

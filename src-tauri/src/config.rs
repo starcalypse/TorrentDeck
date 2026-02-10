@@ -47,7 +47,7 @@ fn config_path() -> PathBuf {
             log::warn!("Could not determine config directory, falling back to current dir");
             PathBuf::from(".")
         })
-        .join("TrackerRelo");
+        .join("TorrentDeck");
     std::fs::create_dir_all(&dir).ok();
     let path = dir.join("config.json");
     log::debug!("Config path: {}", path.display());

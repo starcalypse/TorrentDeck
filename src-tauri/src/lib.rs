@@ -2,7 +2,7 @@ mod commands;
 mod config;
 mod downloader;
 
-use tauri::{LogicalUnit, Manager, PixelUnit, WindowSizeConstraints};
+use tauri::Manager;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,21 +28,10 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            log::info!("TrackerRelo starting");
+            log::info!("TorrentDeck starting");
 
             for (_, window) in app.webview_windows() {
-                let inner_size = window.inner_size()?;
-                let scale_factor = window.scale_factor()?;
-                let logical_size = inner_size.to_logical::<f64>(scale_factor);
-                let locked_width = logical_size.width;
-
-                let constraints = WindowSizeConstraints {
-                    min_width: Some(PixelUnit::from(LogicalUnit::new(locked_width))),
-                    max_width: Some(PixelUnit::from(LogicalUnit::new(locked_width))),
-                    ..Default::default()
-                };
-
-                window.set_size_constraints(constraints)?;
+                window.set_min_size(Some(tauri::LogicalSize::new(860.0, 500.0)))?;
             }
 
             Ok(())

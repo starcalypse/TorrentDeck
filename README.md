@@ -1,8 +1,8 @@
-# TrackerRelo
+# TorrentDeck
 
-Batch tracker URL replacement tool for qBittorrent and Transmission. A desktop app built with Tauri 2 + React.
+Multi-functional torrent management tool for qBittorrent and Transmission. A desktop app built with Tauri 2 + React.
 
-批量替换 qBittorrent / Transmission tracker 地址的桌面工具。基于 Tauri 2 + React 构建。
+多功能 qBittorrent / Transmission 种子管理桌面工具。基于 Tauri 2 + React 构建。
 
 ![Preview](docs/Preview.png)
 
@@ -20,9 +20,9 @@ Batch tracker URL replacement tool for qBittorrent and Transmission. A desktop a
 
 ## Note / 注意
 
-> **macOS:** The app is not code-signed. On first launch, right-click the app and select "Open", or run `xattr -cr /path/to/TrackerRelo.app` to bypass Gatekeeper.
+> **macOS:** The app is not code-signed. On first launch, right-click the app and select "Open", or run `xattr -cr /path/to/TorrentDeck.app` to bypass Gatekeeper.
 >
-> **macOS：** 应用未签名。首次打开请右键选择「打开」，或执行 `xattr -cr /path/to/TrackerRelo.app` 解除限制。
+> **macOS：** 应用未签名。首次打开请右键选择「打开」，或执行 `xattr -cr /path/to/TorrentDeck.app` 解除限制。
 
 ## Development
 
